@@ -21,7 +21,7 @@ CREATE TABLE projet.projets(
 id_projet SERIAL PRIMARY KEY NOT NULL,
 id_cours INTEGER NOT NULL REFERENCES projet.cours(id_cours),
 nom varchar(30) NOT NULL,
-date_debut date NOT NULL CHECK ( date_debut >= timenow() ), --format de date default => aaaa-mm-jj--
+date_debut date NOT NULL CHECK ( date_debut >= now() ), --format de date default => aaaa-mm-jj--
 date_fin date NOT NULL CHECK (date_fin> projets.date_debut) ,
 nbr_groupe INTEGER NOT NULL,
 nbr_places_groupe INTEGER NOT NULL
@@ -43,15 +43,43 @@ CREATE TABLE projet.inscriptions_cours(
     id_etudiant INTEGER NOT NULL REFERENCES projet.etudiants(id_etudiant)
 );
 
-CREATE OR REPLACE FUNCTION projet.ajouter_cours (new_nom varchar(20),new_code_cours varchar(20), new_credit INTEGER, new_bloc char) RETURNS INTEGER AS $$
+CREATE OR REPLACE FUNCTION projet.ajouter_cours (new_nom varchar(20),new_code_cours varchar(20), new_bloc char, new_credit INTEGER) RETURNS INTEGER AS $$
     DECLARE
         id INTEGER;
     BEGIN
-        INSERT INTO projet.cours VALUES (DEFAULT, new_nom, new_bloc, new_code_cours, new_credit );
+        INSERT INTO projet.cours VALUES (DEFAULT, new_nom, new_code_cours, new_bloc, new_credit );
         SELECT c.id_cours FROM projet.cours c WHERE c.code_cours = code_cours INTO id;
     RETURN id;
     END;
     $$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE  FUNCTION projet.ajouter_etudiant(new_nom varchar(20), new_prenom varchar(20), new_adresse_mail varchar(50))
+RETURNS INTEGER AS $$
+    DECLARE
+        id INTEGER;
+
+    BEGIN
+        INSERT INTO projet.etudiants VALUES (DEFAULT, new_nom, new_prenom, new_adresse_mail, NULL);
+        SELECT e.id_etudiant FROM projet.etudiants e WHERE e.email = new_adresse_mail INTO id;
+
+    RETURN id;
+
+END;
+
+    $$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION projet.inscription_cours(new_id_cours INTEGER, new_id_etudiant INTEGER)
+RETURNS VOID AS $$
+
+    BEGIN
+        INSERT INTO projet.inscriptions_cours VALUES (new_id_cours, new_id_etudiant);
+        SELECT ic.id_etudiant, ic.id_cours FROM projet.inscriptions_cours ic
+        WHERE ic.id_cours = new_id_cours AND ic.id_etudiant = new_id_etudiant;
+
+
+    END;
+
+    $$LANGUAGE plpgsql;
 
 
 
@@ -60,7 +88,9 @@ CREATE OR REPLACE FUNCTION projet.ajouter_cours (new_nom varchar(20),new_code_co
 
 
 --------------------- Appel de procédure --------------------
-SELECT projet.ajouter_cours('test','BINV111',2,'1');
+SELECT projet.ajouter_cours('test','BINV1112','1',1);
+SELECT projet.ajouter_etudiant('Test','Arnaud', 'test.arnaud@student.vinci.be');
+SELECT projet.inscription_cours(1,1);
 ---------------------   INSERTS   ---------------------
 ------ insert etudiant -----
 INSERT INTO projet.etudiants VALUES (DEFAULT, 'Andrade', 'Amaury', 'amaury.andrade@student.vinci.be', NULL  );
@@ -76,3 +106,7 @@ INSERT INTO projet.cours VALUES (DEFAULT, 'web2', 'BINV2011', '2', 6);
 INSERT INTO projet.cours VALUES (DEFAULT, 'pae', 'BINV2305', '2', 10);
 ------ insert
 --------------------- REQUÊTES -------------------
+SELECT c.id_cours FROM projet.cours c WHERE c.code_cours = code_cours;
+SELECT c.* FROM projet.cours c;
+SELECT e.id_etudiant FROM projet.etudiants e;
+SELECT c.id_cours, c.nom FROM projet.cours c;
