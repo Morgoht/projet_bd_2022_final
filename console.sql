@@ -27,11 +27,13 @@ nbr_groupe INTEGER NOT NULL,
 nbr_places_groupe INTEGER NOT NULL
 );
 
-CREATE TABLE projet.groupes(
+CREATE  TABLE projet.groupes(
 id_groupe SERIAL PRIMARY KEY NOT NULL,
+num_groupe SERIAL UNIQUE NOT NULL,
 num_projet  INTEGER NOT NULL REFERENCES projet.projets(id_projet),
-etat varchar NOT NULL CHECK ( etat in ('temporaire', 'définitif', 'definitif') ),
-nbr_membre INTEGER NULL
+etat varchar(10) DEFAULT 'temporaire' NOT NULL CHECK ( etat in ('temporaire', 'définitif', 'definitif') ),
+nbr_membre INTEGER NULL,
+UNIQUE (num_projet, num_groupe)
 );
 CREATE TABLE projet.inscriptions_groupe(
 id_groupe INTEGER NOT NULL REFERENCES projet.groupes(id_groupe),
@@ -83,20 +85,30 @@ CREATE OR REPLACE FUNCTION projet.inscription_cours(new_id_cours INTEGER, new_id
 RETURNS VOID AS $$
 
     BEGIN
-        INSERT INTO projet.inscriptions_cours VALUES (new_id_cours, new_id_etudiant);
-        SELECT ic.id_etudiant, ic.id_cours FROM projet.inscriptions_cours ic
-        WHERE ic.id_cours = new_id_cours AND ic.id_etudiant = new_id_etudiant;
-
-
+        INSERT INTO projet.inscriptions_cours VALUES (new_id_cours,new_id_etudiant);
     END;
     $$LANGUAGE plpgsql;
 
-CREATE OR REPLACE FUNCTION projet.ajouter_projet_cours(id_cours INTEGER, nom varchar(20), date_debut DATE,
-                                                        date_fin DATE, nbr_groupe INTEGER, nbr_place_groupe INTEGER ) RETURNS VOID AS $$
+
+CREATE OR REPLACE FUNCTION projet.ajouter_projet_cours(id_cours_exist INTEGER, new_nom varchar(20), new_date_debut DATE,
+                                                        new_date_fin DATE, new_nbr_groupe INTEGER, new_nbr_place_groupe INTEGER ) RETURNS VOID AS $$
 BEGIN
-    INSERT INTO projet.projets VALUES (DEFAULT,id_cours, nom,date_debut, date_fin, nbr_groupe, nbr_place_groupe );
+    INSERT INTO projet.projets VALUES (DEFAULT,id_cours_exist, new_nom, new_date_debut, new_date_fin, new_nbr_groupe, new_nbr_place_groupe );
 END;
 $$LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION projet.ajouter_groupe_projet(id_projet_exist INTEGER, new_nbr_groupe INTEGER, new_nbr_membre INTEGER ) RETURNS VOID AS $$
+    DECLARE
+        i INTEGER := new_nbr_groupe;
+        record RECORD;
+    BEGIN
+        WHILE i>0 LOOP
+            INSERT INTO projet.groupes VALUES (DEFAULT,DEFAULT, id_projet_exist,DEFAULT,new_nbr_membre );
+            i:= i-1;
+        END LOOP;
+
+    END;
+    $$LANGUAGE plpgsql;
 
 
 
@@ -107,10 +119,13 @@ $$LANGUAGE plpgsql;
 SELECT projet.ajouter_cours('test','BINV1112','1',1);
 SELECT projet.ajouter_etudiant('Test','Arnaud', 'test.arnaud@student.vinci.be');
 SELECT projet.inscription_cours(1,1);
-SELECT projet.ajouter_projet_cours(1,'test projet de cours 1', '2022-11-16','2022-12-25',7,3);
+SELECT projet.ajouter_projet_cours(1,'test projet de cours 1', date(now()),'2022-12-25',7,3);
+SELECT projet.ajouter_groupe_projet(1,4,3);
+
 --------------------- REQUÊTES -------------------
-SELECT c.id_cours FROM projet.cours c WHERE c.code_cours = code_cours;
+SELECT c.id_cours FROM projet.cours c;
 SELECT c.* FROM projet.cours c;
 SELECT e.id_etudiant FROM projet.etudiants e;
 SELECT c.id_cours, c.nom FROM projet.cours c;
 SELECT * FROM projet.projets;
+SELECT * FROM projet.groupes;
