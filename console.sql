@@ -139,7 +139,51 @@ BEGIN
     WHERE id_groupe = _id_groupe;
 END;
 $$ LANGUAGE plpgsql;
---------------------- Appel de procédure --------------------
+
+CREATE OR REPLACE FUNCTION projet.retirer_groupe(new_id_projet, new_id_etudiant) RETURN VOID AS $$ 
+DECLARE 
+    _id_groupe INTEGER := 0;
+    _nbr_membre_moins := 1;
+BEGIN 
+    IF  NOT EXIST ( SELECT g.id_groupe
+        FROM groupes g, inscriptions_groupe ic
+        WHERE ic.id_etudiant = new_id_etudiant 
+        AND ic.id_groupe = g.id_groupe 
+        AND g.id_prohet = new_id_projet)
+    THEN 
+        RAISE data_exception;
+    END IF;
+    SELECT g.id_groupe
+        FROM groupes g, inscriptions_groupe ic
+        WHERE ic.id_etudiant = new_id_etudiant 
+        AND ic.id_groupe = g.id_groupe 
+        AND g.id_prohet = new_id_projet
+        INTO _id_groupe;
+    IF EXIST(SELECT *
+             FROM groupes 
+             WHERE id_groupe = _id_groupe
+             AND etat = 'définitif' OR etat = 'definitif' )
+    THEN 
+        RAISE 'Ce groupe est déjà validé';
+    END IF;
+    
+    DELETE FROM inscriptions_groupe WHERE id_groupe = _id_groupe AND id_etudiant= new_id_etudiant;
+    UPDATE groupes SET nbr_membre = nbr_membre - _nbr_membre_moins;
+END 
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION projet.afficher_projets(new_id_etudiant) RETURNS TABLE
+AS
+RETURN
+    SELECT p.id_projet, p.nom, c.id_cours, g.numero_groupe
+
+    FROM projets p, cours c, groupe g, inscriptions_groupe ig, inscriptions_cours ic
+
+    WHERE ic.id_cours = c.id_cours AND ic.id_etudiant = new_id_etudiant AND p.id_cours = c.id_cours AND
+
+
+
+--------------------- Appel de procédure ---------------------
 SELECT projet.ajouter_cours('test','BINV1112','1',1);
 SELECT projet.ajouter_etudiant('Test','Arnaud', 'test.arnaud@student.vinci.be');
 SELECT projet.inscription_cours(1,1);
