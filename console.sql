@@ -94,6 +94,7 @@ RETURNS VOID AS $$
     END;
     $$LANGUAGE plpgsql;
 
+
 CREATE OR REPLACE FUNCTION projet.ajouter_projet_cours(id_cours INTEGER, nom varchar(20), date_debut DATE,
                                                         date_fin DATE, nbr_groupe INTEGER, nbr_place_groupe INTEGER ) RETURNS VOID AS $$
 BEGIN
@@ -140,7 +141,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE FUNCTION projet.retirer_groupe(new_id_projet, new_id_etudiant) RETURN VOID AS $$ 
+CREATE OR REPLACE FUNCTION projet.retirer_groupe(new_id_projet, new_id_etudiant) RETURN VOID AS $$ --application etudiant
 DECLARE 
     _id_groupe INTEGER := 0;
     _nbr_membre_moins := 1;
@@ -149,7 +150,7 @@ BEGIN
         FROM groupes g, inscriptions_groupe ic
         WHERE ic.id_etudiant = new_id_etudiant 
         AND ic.id_groupe = g.id_groupe 
-        AND g.id_prohet = new_id_projet)
+        AND g.id_projet = new_id_projet)
     THEN 
         RAISE data_exception;
     END IF;
@@ -157,7 +158,7 @@ BEGIN
         FROM groupes g, inscriptions_groupe ic
         WHERE ic.id_etudiant = new_id_etudiant 
         AND ic.id_groupe = g.id_groupe 
-        AND g.id_prohet = new_id_projet
+        AND g.id_projet = new_id_projet
         INTO _id_groupe;
     IF EXIST(SELECT *
              FROM groupes 
@@ -172,14 +173,39 @@ BEGIN
 END 
 $$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE FUNCTION projet.afficher_projets(new_id_etudiant) RETURNS TABLE
+CREATE OR REPLACE FUNCTION projet.afficher_projets(new_id_etudiant) RETURNS TABLE --application etudiant 
 AS
 RETURN
     SELECT p.id_projet, p.nom, c.id_cours, g.numero_groupe
 
     FROM projets p, cours c, groupe g, inscriptions_groupe ig, inscriptions_cours ic
 
-    WHERE ic.id_cours = c.id_cours AND ic.id_etudiant = new_id_etudiant AND p.id_cours = c.id_cours AND
+    WHERE ic.id_cours = c.id_cours AND ic.id_etudiant = new_id_etudiant AND p.id_cours = c.id_cours;
+END
+$$ LANGUAGE plpgsql;
+
+
+CREATE OR REPLACE FUNCTION projet.afficher_projets_sans_groupe(new_id_etudiant) RETURNS TABLE --application etudiant 
+AS
+RETURN
+    SELECT p.id_projet, p.nom, c.id_cours, p.date_debut, p.date_fin
+
+    FROM projets p, cours c, groupe g, inscriptions_groupe ig, inscriptions_cours ic
+
+    WHERE ic.id_cours = c.id_cours AND ic.id_etudiant = new_id_etudiant AND p.id_cours = c.id_cours
+    AND new_id_etudiant NOT IN (SELECT ig.id_etudiant 
+                                FROM inscriptions_groupe ig, groupes g WHERE ig.id_groupe = g.id_groupe AND g.id_projet = p.id_projet)
+END
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION projet.afficher_groupes_incomplet(new_id_projet) RETURNS TABLE --application etudiant 
+AS
+RETURN
+    SELECT g.numero_groupe, e.nom, e.prenom, g.nbr_place_groupe 
+    FROM groupe g, etudiants e, inscriptions_groupe ig
+    WHERE ig.id_etudiant = e.id_etudiant AND ig.id_groupe = g.id_groupe AND g.id_projet = new_id_projet AND g.nbr_place_groupe > 0;
+END
+$$ LANGUAGE plpgsql;
 
 
 
