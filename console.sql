@@ -8,6 +8,7 @@ prenom varchar(20)          NOT NULL ,
 email varchar(40)           UNIQUE NOT NULL     CHECK (email LIKE '%@student.vinci.be'),
 mot_de_passe varchar(40)    NULL
 );
+INSERT INTO projet.etudiants VALUES (DEFAULT,'Lacroix','Sasha','Sasha.Lacroix@student.vinci.be', NULL);
 
 
 CREATE TABLE projet.cours(
@@ -22,19 +23,16 @@ id_projet SERIAL PRIMARY KEY NOT NULL,
 id_cours INTEGER NOT NULL REFERENCES projet.cours(id_cours),
 nom varchar(30) NOT NULL,
 date_debut date NOT NULL CHECK ( date_debut >= date(now())-1 ), --format de date default => aaaa-mm-jj--
-date_fin date NOT NULL CHECK (date_fin> projets.date_debut) ,
-nbr_groupe INTEGER NOT NULL
-
+date_fin date NOT NULL CHECK (date_fin> projets.date_debut)
 );
 
-CREATE TABLE projet.groupes(
+CREATE  TABLE projet.groupes(
 id_groupe SERIAL PRIMARY KEY NOT NULL,
-numero_groupe INTEGER NOT NULL UNIQUE,
+num_groupe SERIAL UNIQUE NOT NULL,
 id_projet  INTEGER NOT NULL REFERENCES projet.projets(id_projet),
-etat varchar NOT NULL CHECK ( etat in ('temporaire', 'définitif', 'definitif') ),
+etat varchar(10) DEFAULT 'temporaire' NOT NULL CHECK ( etat in ('temporaire', 'définitif', 'definitif') ),
 nbr_membre INTEGER NULL,
-nbr_place_groupe INTEGER NOT NULL
-
+UNIQUE (id_projet, num_groupe)
 );
 CREATE TABLE projet.inscriptions_groupe(
 id_groupe INTEGER NOT NULL REFERENCES projet.groupes(id_groupe),
@@ -46,6 +44,7 @@ CREATE TABLE projet.inscriptions_cours(
     id_etudiant INTEGER NOT NULL REFERENCES projet.etudiants(id_etudiant)
 );
 ---------------------   INSERTS   ---------------------
+/*
 ------ insert etudiant -----
 INSERT INTO projet.etudiants VALUES (DEFAULT, 'Andrade', 'Amaury', 'amaury.andrade@student.vinci.be', NULL  );
 INSERT INTO projet.etudiants VALUES (DEFAULT, 'Touat', 'Alexandre', 'alexandre.touat@student.vinci.be', NULL  );
@@ -58,9 +57,28 @@ INSERT INTO projet.cours VALUES (DEFAULT, 'web1', 'BINV1101', '1', 6);
 INSERT INTO projet.cours VALUES (DEFAULT, 'algo1', 'BINV1201', '1',4 );
 INSERT INTO projet.cours VALUES (DEFAULT, 'web2', 'BINV2011', '2', 6);
 INSERT INTO projet.cours VALUES (DEFAULT, 'pae', 'BINV2305', '2', 10);
------- insert
+------ insert projet ------
+INSERT INTO projet.projets VALUES (DEFAULT, 2, 'clockin berlin','2022-11-28', '2022-12-25' );
+INSERT INTO projet.projets VALUES (DEFAULT, 3, 'projet web2 jeux','2022-11-28', '2022-12-25' );
+INSERT INTO projet.projets VALUES (DEFAULT, 4, 'projet PAE','2022-11-28', '2023-05-12' );
 
+------- insert groupe ----------
+INSERT INTO projet.groupes VALUES (DEFAULT, DEFAULT, 1, DEFAULT, 2);
+INSERT INTO projet.groupes VALUES (DEFAULT, DEFAULT, 2, DEFAULT, 2);
+INSERT INTO projet.groupes VALUES (DEFAULT, DEFAULT, 3, DEFAULT, 2);
 
+/*
+INSERT INTO projet.groupes VALUES (DEFAULT, DEFAULT, 2, DEFAULT, 3);
+*/
+------- insert inscription -------
+INSERT INTO projet.inscriptions_groupe VALUES (1,1);
+INSERT INTO projet.inscriptions_groupe VALUES (1,2);
+INSERT INTO projet.inscriptions_groupe VALUES (2,3);
+INSERT INTO projet.inscriptions_groupe VALUES (2,4);
+INSERT INTO projet.inscriptions_groupe VALUES (3,5);
+
+*/
+----------------------------------------- APP CENTRALE ----------------------------------------------
 CREATE OR REPLACE FUNCTION projet.ajouter_cours (new_nom varchar(20),new_code_cours varchar(20), new_bloc char, new_credit INTEGER) RETURNS INTEGER AS $$
     DECLARE
         id INTEGER;
@@ -86,99 +104,114 @@ CREATE OR REPLACE FUNCTION projet.inscription_cours(new_id_cours INTEGER, new_id
 RETURNS VOID AS $$
 
     BEGIN
-        INSERT INTO projet.inscriptions_cours VALUES (new_id_cours, new_id_etudiant);
-        SELECT ic.id_etudiant, ic.id_cours FROM projet.inscriptions_cours ic
-        WHERE ic.id_cours = new_id_cours AND ic.id_etudiant = new_id_etudiant;
-
-
+        INSERT INTO projet.inscriptions_cours VALUES (new_id_cours,new_id_etudiant);
     END;
     $$LANGUAGE plpgsql;
 
 
-CREATE OR REPLACE FUNCTION projet.ajouter_projet_cours(id_cours INTEGER, nom varchar(20), date_debut DATE,
-                                                        date_fin DATE, nbr_groupe INTEGER, nbr_place_groupe INTEGER ) RETURNS VOID AS $$
+CREATE OR REPLACE FUNCTION projet.ajouter_projet_cours(id_cours_exist INTEGER, new_nom varchar(20), new_date_debut DATE,
+                                                        new_date_fin DATE) RETURNS VOID AS $$
 BEGIN
-    INSERT INTO projet.projets VALUES (DEFAULT,id_cours, nom,date_debut, date_fin, nbr_groupe, nbr_place_groupe);
+    INSERT INTO projet.projets VALUES (DEFAULT,id_cours_exist, new_nom, new_date_debut, new_date_fin);
 END;
 $$LANGUAGE plpgsql;
 
-CREATE VIEW projet.afficher_cours AS --application etudiant 
-SELECT c.code_cours, c.nom, p.id_projet
-FROM cours c, projets p, etudiants e, inscription_cours ic
+CREATE OR REPLACE FUNCTION projet.ajouter_groupe_projet(id_projet_exist INTEGER, new_nbr_groupe INTEGER, new_nbr_membre INTEGER ) RETURNS VOID AS $$
+    DECLARE
+        i INTEGER := new_nbr_groupe;
+        record RECORD;
+    BEGIN
+        WHILE i>0 LOOP
+            INSERT INTO projet.groupes VALUES (DEFAULT,DEFAULT, id_projet_exist,DEFAULT,new_nbr_membre );
+            i:= i-1;
+        END LOOP;
 
-WHERE (ic.id_cours = c.id_cours AND ic.id_etudiant = e.id_etudiant);
+    END;
+    $$LANGUAGE plpgsql;
 
---AND c.id_cours NOT IN (SELECT p.id_cours FROM projets p)
+CREATE OR REPLACE FUNCTION projet.valider_groupe(id_projet_exist INTEGER, numero_groupe_exist INTEGER ) RETURNS VOID AS $$
+    DECLARE
+        nbr_inscrit INTEGER;
+        id_groupe_exist INTEGER;
+    BEGIN
+        SELECT count(i.id_etudiant) FROM projet.groupes g, projet.inscriptions_groupe i
+        WHERE g.id_groupe = numero_groupe_exist AND g.id_groupe = i.id_groupe INTO nbr_inscrit;
 
-CREATE OR REPLACE FUNCTION projet.ajouter_etudiant_groupe(new_id_projet, new_numero_groupe, new_id_etudiant) RETURN VOID AS $$ --application etudiant
-DECLARE
-    _id_groupe INTEGER := 0;
-    _nbr_membre INTEGER := 1;
-BEGIN
-    IF new_numero_groupe NOT IN (SELECT g.numero_groupe
-                                 FROM groupes g
-                                 WHERE g.nbr_place_groupe != g.nbr_membre)
-    THEN RAISE data_exception;
-    END IF;
-    IF (SELECT p.id_cours 
-        FROM projets p 
-        WHERE p.id_projet = new_id_projet)
-        NOT IN (SELECT ic.id_cours
-                FROM inscriptions_cours ic
-                WHERE ic.id_etudiant = new_id_etudiant)
-    THEN RAISE data_exception;
-    END IF;
-    SELECT id_groupe
-            FROM groupes
-            WHERE numero_groupe = new_numero_groupe
-            INTO _id_groupe;
+        SELECT g.id_groupe FROM projet.groupes g
+        WHERE g.num_groupe = numero_groupe_exist AND g.id_projet = id_projet_exist INTO id_groupe_exist;
 
-    INSERT INTO projet.inscriptions_groupe
-    VALUES (_id_groupe, new_id_etudiant);
+        IF (SELECT g.nbr_membre FROM projet.groupes g WHERE g.id_groupe = id_groupe_exist ) <> nbr_inscrit
+        THEN RAISE EXCEPTION 'pas complet';
+        ELSE
+            UPDATE projet.groupes
+            SET etat = 'définitif'
+            WHERE id_groupe = id_groupe_exist ;
+        END IF;
+    end;
+    $$ LANGUAGE plpgsql;
 
-    UPDATE groupe SET nbr_membre = nbr_membre + _nbr_membre 
-    WHERE id_groupe = _id_groupe;
-END;
-$$ LANGUAGE plpgsql;
+CREATE OR REPLACE FUNCTION projet.valider_tous_les_groupes(id_projet_exist INTEGER) RETURNS VOID AS $$
 
-CREATE OR REPLACE FUNCTION projet.retirer_groupe(new_id_projet, new_id_etudiant) RETURN VOID AS $$ --application etudiant
-DECLARE 
-    _id_groupe INTEGER := 0;
-    _nbr_membre_moins := 1;
-BEGIN 
-    IF  NOT EXIST ( SELECT g.id_groupe
-        FROM groupes g, inscriptions_groupe ic
-        WHERE ic.id_etudiant = new_id_etudiant 
-        AND ic.id_groupe = g.id_groupe 
-        AND g.id_projet = new_id_projet)
-    THEN 
-        RAISE data_exception;
-    END IF;
-    SELECT g.id_groupe
-        FROM groupes g, inscriptions_groupe ic
-        WHERE ic.id_etudiant = new_id_etudiant 
-        AND ic.id_groupe = g.id_groupe 
-        AND g.id_projet = new_id_projet
-        INTO _id_groupe;
-    IF EXIST(SELECT *
-             FROM groupes 
-             WHERE id_groupe = _id_groupe
-             AND etat = 'définitif' OR etat = 'definitif' )
-    THEN 
-        RAISE 'Ce groupe est déjà validé';
-    END IF;
-    
-    DELETE FROM inscriptions_groupe WHERE id_groupe = _id_groupe AND id_etudiant= new_id_etudiant;
-    UPDATE groupes SET nbr_membre = nbr_membre - _nbr_membre_moins;
-END 
-$$ LANGUAGE plpgsql;
+    BEGIN
+        IF (SELECT DISTINCT g.id_groupe FROM projet.groupes g, projet.inscriptions_groupe i
+            WHERE i.id_groupe = g.id_groupe AND g.nbr_membre != (SELECT count(i.id_etudiant) FROM projet.inscriptions_groupe i WHERE i.id_groupe = g.id_groupe )
+            group by g.id_groupe) > 0
+        THEN
+            RAISE EXCEPTION 'groupe incomplet';
+        ELSE
+            UPDATE projet.groupes SET etat = 'définitif' WHERE id_projet = id_projet_exist;
+        END IF;
+    END ;
 
-CREATE OR REPLACE FUNCTION projet.afficher_projets(new_id_etudiant) RETURNS TABLE --application etudiant 
-AS
-RETURN
-    SELECT p.id_projet, p.nom, c.id_cours, g.numero_groupe
+    $$ LANGUAGE plpgsql;
 
-    FROM projets p, cours c, groupe g, inscriptions_groupe ig, inscriptions_cours ic
+
+-------------------VUE------------------------
+
+CREATE OR REPLACE VIEW projet.vue_cours AS
+    SELECT c.id_cours, c.nom, COALESCE( string_agg(p.id_projet::varchar, ', '),'pas encore de projet')
+    FROM projet.cours c LEFT OUTER JOIN projet.projets p ON c.id_cours = p.id_cours
+    group by c.id_cours, c.nom;
+
+CREATE OR REPLACE VIEW projet.vue_projets AS
+SELECT DISTINCT  p.id_projet, p.nom, p.id_cours,  COUNT(g.id_groupe) AS "nombre de groupe",
+                count(g.etat) filter ( where g.etat = 'définitif' ) AS "groupe complet"
+FROM projet.cours c LEFT OUTER JOIN projet.projets p ON c.id_cours = p.id_projet LEFT OUTER JOIN projet.groupes g ON p.id_projet = g.id_projet
+    LEFT OUTER JOIN projet.inscriptions_groupe i ON g.id_groupe = i.id_groupe
+WHERE p.id_projet IS NOT NULL
+group by p.id_cours, p.id_projet, p.nom, p.id_cours, i.id_etudiant, g.etat;
+
+CREATE OR REPLACE  VIEW projet.vue_groupe_projet AS
+    SELECT  p.id_projet,  g.num_groupe as Numéro, e.nom, e.prenom,
+    CASE WHEN g.etat = 'définitif' THEN 'Vrai' ELSE 'False' END "Validé",
+    CASE WHEN count(i.id_etudiant) = g.nbr_membre THEN 'True' ELSE 'False' END "Complet"
+    FROM projet.projets p, projet.groupes g, projet.etudiants e, projet.inscriptions_groupe i, projet.inscriptions_groupe i2
+    WHERE p.id_projet = g.id_projet AND g.id_groupe = i.id_groupe
+        AND i.id_etudiant = e.id_etudiant AND i.id_groupe = i2.id_groupe
+    GROUP BY p.id_projet, g.num_groupe, e.nom, e.prenom, g.etat, g.nbr_membre
+    ORDER BY g.num_groupe;
+
+
+
+
+SELECT * FROM projet.etudiants;
+SELECT * FROM projet.cours;
+
+/*
+SELECT DISTINCT * FROM projet.vue_projets;
+SELECT * FROM projet.vue_groupe_projet;
+SELECT * FROM projet.vue_cours;
+SELECT  numéro, nom, prenom, "Validé", "Complet" FROM projet.vue_groupe_projet WHERE id_projet = 1;
+SELECT * FROM projet.groupes WHERE id_groupe = 1;
+SELECT * FROM projet.groupes g WHERE g.etat = 'définitif';
+SELECT * FROM projet.projets;
+SELECT DISTINCT g.id_groupe, count(i.id_etudiant) as "inscris" FROM projet.groupes g, projet.inscriptions_groupe i
+WHERE i.id_groupe = g.id_groupe AND g.nbr_membre != (SELECT count(i.id_etudiant) FROM projet.inscriptions_groupe i WHERE i.id_groupe = g.id_groupe )
+group by g.id_groupe;
+select * from projet.groupes;
+select * from projet.inscriptions_groupe;
+*/
+
 
     WHERE ic.id_cours = c.id_cours AND ic.id_etudiant = new_id_etudiant AND p.id_cours = c.id_cours;
 END
@@ -209,14 +242,24 @@ $$ LANGUAGE plpgsql;
 
 
 
---------------------- Appel de procédure ---------------------
 SELECT projet.ajouter_cours('test','BINV1112','1',1);
+--------------------- Appel de procédure --------------------
+/*
+
+SELECT projet.ajouter_groupe_projet(2,1,3);
+SELECT projet.ajouter_cours('NeuroPsy','BINV2103','2',4);
 SELECT projet.ajouter_etudiant('Test','Arnaud', 'test.arnaud@student.vinci.be');
 SELECT projet.inscription_cours(1,1);
-SELECT projet.ajouter_projet_cours(1,'test projet de cours 1', '2022-11-16','2022-12-25',7,3);
+SELECT projet.ajouter_projet_cours(1,'test projet de cours 1', date(now()),'2022-12-25');
+SELECT projet.ajouter_projet_cours(1,'test projet de cours 2', date(now()),'2022-12-25');
+*/
 --------------------- REQUÊTES -------------------
-SELECT c.id_cours FROM projet.cours c WHERE c.code_cours = code_cours;
+/*
+SELECT c.id_cours FROM projet.cours c;
 SELECT c.* FROM projet.cours c;
 SELECT e.id_etudiant FROM projet.etudiants e;
 SELECT c.id_cours, c.nom FROM projet.cours c;
 SELECT * FROM projet.projets;
+*/
+
+
