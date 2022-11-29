@@ -147,7 +147,20 @@ CREATE OR REPLACE FUNCTION projet.valider_groupe(id_projet_exist INTEGER, numero
             WHERE id_groupe = id_groupe_exist ;
         END IF;
     end;
+    $$ LANGUAGE plpgsql;
 
+CREATE OR REPLACE FUNCTION projet.valider_tous_les_groupes(id_projet_exist INTEGER) RETURNS VOID AS $$
+
+    BEGIN
+        IF (SELECT DISTINCT g.id_groupe FROM projet.groupes g, projet.inscriptions_groupe i
+            WHERE i.id_groupe = g.id_groupe AND g.nbr_membre != (SELECT count(i.id_etudiant) FROM projet.inscriptions_groupe i WHERE i.id_groupe = g.id_groupe )
+            group by g.id_groupe) > 0
+        THEN
+            RAISE EXCEPTION 'groupe incomplet';
+        ELSE
+            UPDATE projet.groupes SET etat = 'définitif' WHERE id_projet = id_projet_exist;
+        END IF;
+    END ;
 
     $$ LANGUAGE plpgsql;
 
@@ -187,6 +200,11 @@ SELECT * FROM projet.groupes g WHERE g.etat = 'définitif';
 SELECT DISTINCT * FROM projet.vue_projets;
 SELECT * FROM projet.vue_cours;
 SELECT * FROM projet.projets;
+SELECT DISTINCT g.id_groupe, count(i.id_etudiant) as "inscris" FROM projet.groupes g, projet.inscriptions_groupe i
+WHERE i.id_groupe = g.id_groupe AND g.nbr_membre != (SELECT count(i.id_etudiant) FROM projet.inscriptions_groupe i WHERE i.id_groupe = g.id_groupe )
+group by g.id_groupe;
+select * from projet.groupes;
+select * from projet.inscriptions_groupe;
 */
 
 
@@ -194,10 +212,12 @@ SELECT * FROM projet.projets;
 
 
 
+SELECT * FROM projet.groupes;
 
+SELECT projet.valider_tous_les_groupes(2);
+SELECT projet.valider_groupe(2,2);
 --------------------- Appel de procédure --------------------
 /*
-SELECT projet.valider_groupe(1,1);
 SELECT projet.ajouter_groupe_projet(2,1,3);
 SELECT projet.ajouter_cours('test','BINV1112','1',1);
 SELECT projet.ajouter_cours('NeuroPsy','BINV2103','2',4);
