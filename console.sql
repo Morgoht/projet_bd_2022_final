@@ -322,6 +322,7 @@ CREATE OR REPLACE FUNCTION projet.demo_projet_init() RETURNS VOID AS $$
         INSERT INTO projet.cours VALUES (DEFAULT, 'APOO', 'BINV1020', '1', 6);                ------------Etudiants---------            ------------Etudiants---------
         INSERT INTO projet.etudiants VALUES(DEFAULT,'Damas','Christophe', 'cd@student.vinci.be');
         INSERT INTO projet.etudiants VALUES(DEFAULT,'Fenneeuw','Stéphanie', 'sf@student.vinci.be');
+        INSERT INTO projet.etudiants VALUES(DEFAULT,'Damas','Christophe', 'cd@student.vinci.be');
                 -----------Inscriptions cours ------------
         INSERT INTO projet.inscriptions_cours VALUES (1,1);
         INSERT INTO projet.inscriptions_cours VALUES (1,2);
