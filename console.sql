@@ -237,7 +237,7 @@ BEGIN
             AND ic.id_groupe = g.id_groupe
             AND g.id_projet = new_id_projet)
     THEN
-        RAISE data_exception;
+        RAISE 'échoue';
 END IF;
 SELECT g.id_groupe
 FROM projet.groupes g, projet.inscriptions_groupe ic
