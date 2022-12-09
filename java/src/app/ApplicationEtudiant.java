@@ -10,21 +10,26 @@ import java.util.Scanner;
 
 public class ApplicationEtudiant {
 
-    private String url = "jdbc:postgresql://localhost:5432/postgres";
+    //private String url = "jdbc:postgresql://localhost:5432/projetbd_final";
     private Connection conn=null;
     private PreparedStatement afficherCours, ajouterEtudiantGroupe, retirerGroupe, afficherProjet, get_id,
                               afficherProjetSansGroupe, afficherGroupeIncomplet, Get_id_groupe, checkLogin;
     private String loginUser;
     public Scanner scanner = new Scanner(System.in);
-    private String user = "postgres";
-    private String motDePasse = "Scorpion666";
+    //private String user = "postgres";
+    //private String motDePasse = "JoRxM3ZXEP";
     private int idEtudiant;
 
-    /*
-    url ="jdbc:postgresql://172.24.2.6:5432/projetbd_2022";
-    user = "alexandretouat";
-    password = "TOBALQZ4Y"
-    */
+
+
+
+     private String url = "jdbc:postgresql://172.24.2.6:5432/dbalexandretouat";
+    private String user = "alexandretouat";
+    private String motDePasse = "TOBALQZ4Y";
+
+
+
+
 
 
     public ApplicationEtudiant(){
@@ -62,7 +67,7 @@ public class ApplicationEtudiant {
 
         try{
             System.out.println("Se connecter");
-            System.out.println("Entre le nom de l'utilisateur");
+            System.out.println("Entre l'email de l'utilisateur");
             login = scanner.nextLine();
             System.out.println("Entrez le mot de passse");
             mdpInput = scanner.nextLine();
@@ -71,7 +76,6 @@ public class ApplicationEtudiant {
             ResultSet etudiantMdp = checkLogin.executeQuery();
             while(etudiantMdp.next()) {
                 mdp = etudiantMdp.getString(1);
-                System.out.println(mdp);
             }
 
             if(BCrypt.checkpw(mdpInput,mdp)) {
@@ -79,7 +83,6 @@ public class ApplicationEtudiant {
                 ResultSet rs = get_id.executeQuery();
                 while (rs.next()){
                     idEtudiant = rs.getInt(1);
-                    System.out.println(idEtudiant);
                 }
                 return true;
 
@@ -103,7 +106,7 @@ public class ApplicationEtudiant {
     public String menu() {
         return "1 : visualiser les cours.\n"
             +"2 : Se rajouter dans un groupe.\n"
-            +"3 : Se retier d'un groupe.\n"
+            +"3 : Se retirer d'un groupe.\n"
             +"4 : Visualiser les projets disponible.\n"
             +"5 : Visualiser les projets sans groupe.\n"
             +"6 : Visualiser les compositions de groupes icompllets d'un projet. \n"
@@ -111,9 +114,8 @@ public class ApplicationEtudiant {
     }
 
     public void afficherCours() {
-        scanner.nextLine();// Pour catcher le "\n" lorsque l'utilisateur rentre quelque chose au clavier
         try{
-            System.out.println("PAE : \n");
+            System.out.println("Mes cours : \n");
             afficherCours.setInt(1, idEtudiant);
             try (ResultSet rs=afficherCours.executeQuery()) {
                 while(rs.next()) {
@@ -128,18 +130,17 @@ public class ApplicationEtudiant {
     }
 
     public void ajouterEtudiantGroupe() {
-        scanner.nextLine();// Pour catcher le "\n" lorsque l'utilisateur rentre quelque chose au clavier
         try{
             System.out.println("Entrez l'id du projet : ");
-            int id = scanner.nextInt();
+            String id = scanner.nextLine();
             System.out.println("Entrez le numero du groupe : ");
             int numero = scanner.nextInt();
 
-            ajouterEtudiantGroupe.setInt(1, id);
+            ajouterEtudiantGroupe.setString(1, id);
             ajouterEtudiantGroupe.setInt(2, numero);
             ajouterEtudiantGroupe.setInt(3, idEtudiant);
             ajouterEtudiantGroupe.executeQuery();
-            System.out.println("Le rajput de l'étudiant a bien été fait");
+            System.out.println("Le rajout de l'étudiant a bien été fait");
         }catch (SQLException se) {
             System.out.println("Erreur lors du rajouter de l'étudiant à un groupe");
             se.printStackTrace();
@@ -149,8 +150,8 @@ public class ApplicationEtudiant {
     public void retirerGroupe() {
         try{
             System.out.println("Entrez l'id du projet : ");
-            int id_projet = scanner.nextInt();
-            retirerGroupe.setInt(1, id_projet);
+            String id_projet = scanner.nextLine();
+            retirerGroupe.setString(1, id_projet);
             retirerGroupe.setInt(2, idEtudiant);
             retirerGroupe.executeQuery();
             System.out.println("L'étudiant a bien été retirer du groupe.");
@@ -166,7 +167,7 @@ public class ApplicationEtudiant {
             afficherProjet.setInt(1, idEtudiant);
             try (ResultSet rs=afficherProjet.executeQuery()) {
                 while(rs.next()) {
-                    System.out.println( " | ID du projet : " + rs.getInt(1) +
+                    System.out.println( " ID du projet : " + rs.getString(1) +
                             " | Nom : " + rs.getString(2) + " | Id du cours : " +  rs.getInt(3)
                             + " | Groupe numéro : " +  rs.getInt(4));
                 }
@@ -184,9 +185,9 @@ public class ApplicationEtudiant {
             afficherProjetSansGroupe.setInt(1, idEtudiant);
             try (ResultSet rs=afficherProjetSansGroupe.executeQuery()) {
                 while(rs.next()) {
-                    System.out.println( " | ID du projet : " + rs.getInt(1) +
+                    System.out.println( " ID du projet : " + rs.getString(1) +
                             " | Nom : " + rs.getString(2) + " | Id du cours : " +  rs.getInt(3)
-                            + " | Date début : " +  rs.getInt(4) + " | Date fin : " +  rs.getInt(4));
+                            + " | Date début : " +  rs.getDate(4) + " | Date fin : " +  rs.getDate(4));
                 }
             }
         }catch (SQLException se) {
@@ -199,12 +200,12 @@ public class ApplicationEtudiant {
     public void afficherGroupeIncomplet() {
         try{
             System.out.println("Entrez l'id du projet : ");
-            int id_projet = scanner.nextInt();
+            String id_projet = scanner.nextLine();
             System.out.println("La liste des groupes incomplet : \n");
-            afficherGroupeIncomplet.setInt(1, id_projet);
+            afficherGroupeIncomplet.setString(1, id_projet);
             try (ResultSet rs=afficherGroupeIncomplet.executeQuery()) {
                 while(rs.next()) {
-                    System.out.println( " | Numéro groupe : " + rs.getInt(1) +
+                    System.out.println( "  Numéro groupe : " + rs.getInt(1) +
                             " | Nom : " + rs.getString(2) + " | Prénom : " +  rs.getString(3)
                             + " | Nombre de places : " +  rs.getInt(4));
                 }
