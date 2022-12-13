@@ -18,13 +18,13 @@ public class AppCentrale {
   psVisualiserGroupes, psValiderGroupe, psValiderTousGroupe;
   private Scanner sc = new Scanner(System.in);
   private Connection conn = null;
-  //private String url = "jdbc:postgresql://localhost:5432/projetbd_final";
-  //private String user = "postgres";
-  //private String password = "JoRxM3ZXEP";
+  private String url = "jdbc:postgresql://localhost:5432/projetbd_final";
+  private String user = "postgres";
+  private String password = "JoRxM3ZXEP";
 
-    private String url = "jdbc:postgresql://172.24.2.6:5432/dbalexandretouat";
-    private String user = "alexandretouat";
-    private String password = "TOBALQZ4Y";
+  // private String url = "jdbc:postgresql://172.24.2.6:5432/dbalexandretouat";
+  //private String user = "alexandretouat";
+  //private String password = "TOBALQZ4Y";
 
 
   public AppCentrale(){
