@@ -15,6 +15,7 @@ public class ApplicationEtudiant {
                               afficherProjetSansGroupe, afficherGroupeIncomplet, Get_id_groupe, checkLogin;
     private String loginUser;
     public Scanner scanner = new Scanner(System.in);
+
     private int idEtudiant;
     private String url = "jdbc:postgresql://localhost:5432/postgres";
     private String user = "postgres";
@@ -24,6 +25,7 @@ public class ApplicationEtudiant {
     private String user = "alexandretouat";
     private String motDePasse = "TOBALQZ4Y";
 */
+
 
     public ApplicationEtudiant(){
         try {
@@ -45,7 +47,7 @@ public class ApplicationEtudiant {
             retirerGroupe = conn.prepareStatement("SELECT projet.retirer_groupe(?,?)");
             afficherProjet = conn.prepareStatement("SELECT * FROM projet.afficher_projets WHERE id_etudiant = ?;");
             afficherProjetSansGroupe = conn.prepareStatement("SELECT * FROM projet.afficher_projets_sans_groupe WHERE id_etudiant = ?;");
-            afficherGroupeIncomplet = conn.prepareStatement("SELECT * FROM projet.afficher_projets WHERE id_etudiant = ?;");
+            afficherGroupeIncomplet = conn.prepareStatement("SELECT * FROM projet.afficher_projets WHERE id_projet = ?;");
             Get_id_groupe = conn.prepareStatement("SELECT * FROM projet.get_id_groupe WHERE numerogroupe = ?");
             checkLogin = conn.prepareStatement("SELECT projet.check_login(?)");
             get_id = conn.prepareStatement("SELECT projet.get_id(?)");
@@ -123,6 +125,7 @@ public class ApplicationEtudiant {
     }
 
     public void ajouterEtudiantGroupe() {
+        scanner.nextLine();
         try{
             System.out.println("Entrez l'id du projet : ");
             String id = scanner.nextLine();
@@ -141,6 +144,7 @@ public class ApplicationEtudiant {
     }
 
     public void retirerGroupe() {
+        scanner.nextLine();
         try{
             System.out.println("Entrez l'id du projet : ");
             String id_projet = scanner.nextLine();

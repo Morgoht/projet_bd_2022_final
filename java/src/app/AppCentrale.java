@@ -18,6 +18,7 @@ public class AppCentrale {
   psVisualiserGroupes, psValiderGroupe, psValiderTousGroupe;
   private Scanner sc = new Scanner(System.in);
   private Connection conn = null;
+
   private String url = "jdbc:postgresql://localhost:5432/postgres";
   private String user = "postgres";
   private String password = "Scorpion666";
@@ -26,6 +27,7 @@ public class AppCentrale {
     private String user = "alexandretouat";
     private String password = "TOBALQZ4Y";
 */
+
 
 
   public AppCentrale(){
