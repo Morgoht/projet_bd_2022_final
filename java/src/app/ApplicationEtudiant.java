@@ -10,26 +10,21 @@ import java.util.Scanner;
 
 public class ApplicationEtudiant {
 
-    private String url = "jdbc:postgresql://localhost:5432/projetbd_final";
     private Connection conn=null;
     private PreparedStatement afficherCours, ajouterEtudiantGroupe, retirerGroupe, afficherProjet, get_id,
                               afficherProjetSansGroupe, afficherGroupeIncomplet, Get_id_groupe, checkLogin;
     private String loginUser;
     public Scanner scanner = new Scanner(System.in);
-    private String user = "postgres";
-    private String motDePasse = "JoRxM3ZXEP";
+
     private int idEtudiant;
-
-
-
-
-    //private String url = "jdbc:postgresql://172.24.2.6:5432/dbalexandretouat";
-    //private String user = "alexandretouat";
-    //private String motDePasse = "TOBALQZ4Y";
-
-
-
-
+    private String url = "jdbc:postgresql://localhost:5432/postgres";
+    private String user = "postgres";
+    private String motDePasse = "Scorpion666";
+/*
+     private String url = "jdbc:postgresql://172.24.2.6:5432/dbalexandretouat";
+    private String user = "alexandretouat";
+    private String motDePasse = "TOBALQZ4Y";
+*/
 
 
     public ApplicationEtudiant(){
